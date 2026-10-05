@@ -17,16 +17,6 @@
 - **Breaking (library):** `operation_build::build()` takes a new `prune`
   argument before `is_quiet`.
 
-### Fixed
-
-- The unreleased `build --prune` flag no longer deletes a template repository's
-  own files when the `filename` pattern has nothing in front of the scheme slug.
-  Pruning now requires a non-empty prefix before the slug, because an empty
-  prefix matches every file in the output directory and leaves only the
-  extension as a filter. Patterns such as `{{ scheme-slug }}.md` report `W002`
-  instead of pruning, so files like `README.md` and `CHANGELOG.md` are left
-  alone.
-
 ## [0.21.0] - 2026-06-15
 
 ### Fixed
