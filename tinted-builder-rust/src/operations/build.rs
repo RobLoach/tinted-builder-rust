@@ -255,7 +255,7 @@ pub fn build(
 /// A bounded region of the output tree that pruning is allowed to delete from: files directly
 /// inside `directory` whose name is `{prefix}{slug}{suffix}`.
 ///
-/// Anchoring on both sides is what keeps pruning safe. A pattern such as
+/// The `prefix` is what keeps pruning safe, so it is always non-empty. A pattern such as
 /// `themes/ghostty/{{ scheme-system }}-{{ scheme-slug }}` produces no file extension at all, so
 /// matching on the directory alone would sweep up a `README.md` sitting beside the themes.
 #[derive(Debug, PartialEq, Eq, Hash)]
@@ -270,9 +270,14 @@ const SLUG_PLACEHOLDER: &str = "\u{0}";
 
 /// Derives the prune scope for one template config entry and scheme system.
 ///
+/// Pruning requires a non-empty prefix in front of the slug, since an empty prefix is no anchor at
+/// all: it matches every file in the directory and leaves only the suffix as a filter. A suffix is
+/// optional, so a pattern like `{{ scheme-system }}-{{ scheme-slug }}` is still prunable while
+/// `{{ scheme-slug }}.md` is not.
+///
 /// Returns `None` when the pattern cannot be bounded safely: no slug in the final path component
-/// (list templates), a slug in the directory portion, more than one slug, or a slug with nothing
-/// around it to anchor against.
+/// (list templates), a slug in the directory portion, more than one slug, or no prefix in front of
+/// the slug.
 fn prune_scope(
     theme_template_path: impl AsRef<Path>,
     filename: &str,
@@ -292,9 +297,9 @@ fn prune_scope(
     let path = Path::new(&filepath);
     let (prefix, suffix) = path.file_name()?.to_str()?.split_once(SLUG_PLACEHOLDER)?;
 
-    // A second slug would leave the middle unbounded, and a slug with no prefix or suffix would
-    // match every file in the directory.
-    if suffix.contains(SLUG_PLACEHOLDER) || (prefix.is_empty() && suffix.is_empty()) {
+    // A second slug would leave the middle unbounded, and a slug with no prefix in front of it
+    // matches every file in the directory, leaving only the suffix as a filter.
+    if suffix.contains(SLUG_PLACEHOLDER) || prefix.is_empty() {
         return None;
     }
 
@@ -824,6 +829,22 @@ mod tests {
     fn test_prune_scope_none_when_slug_is_the_whole_filename() {
         assert_eq!(
             scope("themes/{{ scheme-slug }}", &SchemeSystem::Base16),
+            None
+        );
+    }
+
+    /// Without a prefix the extension is the only filter left, so pruning the template root would
+    /// delete the template repository's own `README.md`.
+    #[test]
+    fn test_prune_scope_none_when_slug_has_no_prefix() {
+        assert_eq!(scope("{{ scheme-slug }}.md", &SchemeSystem::Base16), None);
+    }
+
+    /// A subdirectory is no safer: every `.conf` file sitting beside the themes would match.
+    #[test]
+    fn test_prune_scope_none_when_slug_has_no_prefix_in_a_subdirectory() {
+        assert_eq!(
+            scope("colors/{{ scheme-slug }}.conf", &SchemeSystem::Base16),
             None
         );
     }
