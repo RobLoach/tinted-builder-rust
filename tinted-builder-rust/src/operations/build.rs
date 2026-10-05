@@ -270,14 +270,9 @@ const SLUG_PLACEHOLDER: &str = "\u{0}";
 
 /// Derives the prune scope for one template config entry and scheme system.
 ///
-/// Pruning requires a non-empty prefix in front of the slug, since an empty prefix is no anchor at
-/// all: it matches every file in the directory and leaves only the suffix as a filter. A suffix is
-/// optional, so a pattern like `{{ scheme-system }}-{{ scheme-slug }}` is still prunable while
-/// `{{ scheme-slug }}.md` is not.
-///
 /// Returns `None` when the pattern cannot be bounded safely: no slug in the final path component
-/// (list templates), a slug in the directory portion, more than one slug, or no prefix in front of
-/// the slug.
+/// (list templates), a slug in the directory portion, more than one slug, or a slug with nothing
+/// around it to anchor against.
 fn prune_scope(
     theme_template_path: impl AsRef<Path>,
     filename: &str,
